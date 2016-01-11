@@ -21,6 +21,10 @@ public class podmGame extends ApplicationAdapter {
         // Declare Batch
 	private SpriteBatch batch;
         
+        // Declare counters
+        private int enBulletCount;
+        private int frBulletCount;
+        
         // Declare timers
         private static int enemyCounter=0;
         private int wave=0;
@@ -63,6 +67,9 @@ public class podmGame extends ApplicationAdapter {
                 friendlyBullets = new Array<Rectangle>();
                 enemyBullets = new Array<Rectangle>();
                 
+                enBulletCount = 0;
+                frBulletCount = 0;
+                
                 playerSprite = new Rectangle();
                 playerSprite.x = WINDOWWIDTH / 2 - 64 / 2;
                 playerSprite.y = 20;
@@ -82,114 +89,118 @@ public class podmGame extends ApplicationAdapter {
 
 	@Override
 	public void render () {
-                // Bullet Spawning
-                
-                
-                
-                // Enemy spawning
-                
-                if (enemyCounter==0) {
-                    wave++;
-                    spawnEnemy(100,864);
-                    spawnEnemy(300,864);
+            // Bullet Spawning
+
+            System.out.println(frBulletCount);
+
+            // Enemy spawning
+
+            if (enemyCounter==0) {
+                wave++;
+                spawnEnemy(100,864);
+                spawnEnemy(300,864);
+            }
+
+            // Enemy movement
+
+            Iterator<Enemy> enemyiter = enemies.iterator();
+            while(enemyiter.hasNext()) {
+                Rectangle enemy = enemyiter.next();
+                if (enemy.y >= WINDOWHEIGHT - 200){
+                    enemy.y -= 200 * Gdx.graphics.getDeltaTime();
                 }
-                
-                // Enemy movement
-                
-                Iterator<Enemy> enemyiter = enemies.iterator();
-                while(enemyiter.hasNext()) {
-                    Rectangle enemy = enemyiter.next();
-                    if (enemy.y >= WINDOWHEIGHT - 200){
-                        enemy.y -= 200 * Gdx.graphics.getDeltaTime();
+            }
+
+            // Enemy bullets
+
+            for(Enemy enemy: enemies){
+                if(TimeUtils.nanoTime() - enemy.getTimeSinceBullet() > 200000000){
+                    enemy.setTimeSinceBullet(TimeUtils.nanoTime());
+                    fireEnemyBullet((int)enemy.x,(int)enemy.y);
+                }
+            }
+
+            // Bullet tracking & cleanup
+
+            Iterator<Rectangle> bulletiter = friendlyBullets.iterator();
+            if(bulletiter.hasNext()){
+                while(bulletiter.hasNext()) {
+                    Rectangle curBullet = bulletiter.next();
+                    if (curBullet.y < WINDOWHEIGHT + 4){
+                        curBullet.y += 200 * Gdx.graphics.getDeltaTime();
+                    } else {
+                        bulletiter.remove();
+                        frBulletCount--;
                     }
                 }
-                
-                // Enemy bullets
-                
-                for(Enemy enemy: enemies){
-                    if(TimeUtils.nanoTime() - enemy.getTimeSinceBullet() > 200000000){
-                        enemy.setTimeSinceBullet(TimeUtils.nanoTime());
-                        fireEnemyBullet((int)enemy.x,(int)enemy.y);
+            }
+
+            Iterator<Rectangle> enemybulletiter = enemyBullets.iterator();
+            if(enemybulletiter.hasNext()){
+                while(enemybulletiter.hasNext()) {
+                    Rectangle curBullet = enemybulletiter.next();
+                    if (curBullet.y < WINDOWHEIGHT){
+                        curBullet.y -= 200 * Gdx.graphics.getDeltaTime();
+                    } else {
+                        enemybulletiter.remove();
                     }
                 }
-                
-                // Bullet tracking
-                
-                Iterator<Rectangle> bulletiter = friendlyBullets.iterator();
-                if(bulletiter.hasNext()){
-                    while(bulletiter.hasNext()) {
-                        Rectangle curBullet = bulletiter.next();
-                        if (curBullet.y < WINDOWHEIGHT + 4){
-                            curBullet.y += 200 * Gdx.graphics.getDeltaTime();
-                        }
+            }
+            
+            // Bullet Collision
+            
+            for(int j = 0; j < friendlyBullets.size ; j++){
+                for(int i = 0; i < enemies.size ; i++){
+                    Enemy enemyCheck = enemies.get(i);
+                    if (enemyCheck.overlaps(friendlyBullets.get(j))){
+                        enemies.removeIndex(i);
+                        enemyCounter--;
                     }
                 }
-                
-                Iterator<Rectangle> enemybulletiter = enemyBullets.iterator();
-                if(enemybulletiter.hasNext()){
-                    while(enemybulletiter.hasNext()) {
-                        Rectangle curBullet = enemybulletiter.next();
-                        if (curBullet.y < WINDOWHEIGHT){
-                            curBullet.y -= 200 * Gdx.graphics.getDeltaTime();
-                        }
-                    }
+            }
+            
+            for(int j = 0; j < enemyBullets.size ; j++){
+                Rectangle bulletCheck = enemyBullets.get(j);
+                if (bulletCheck.overlaps(playerSprite)){
+                    
                 }
-                
-                // Bullet cleanup
-                
-                if(bulletiter.hasNext()){
-                    while(bulletiter.hasNext()) {
-                        Rectangle curBullet = bulletiter.next();
-                        if (curBullet.y > WINDOWHEIGHT + 4){
-                            bulletiter.remove();
-                        }
-                    }
-                }
-                
-                if(enemybulletiter.hasNext()){
-                    while(enemybulletiter.hasNext()) {
-                        Rectangle curBullet = enemybulletiter.next();
-                        if (curBullet.y < -4){
-                            enemybulletiter.remove();
-                        }
-                    }
-                }
-                                
-                // Player actions
-                
-                if(Gdx.input.isKeyPressed(Keys.LEFT)) playerSprite.x -= 200 * Gdx.graphics.getDeltaTime();
-                if(playerSprite.x < 0) playerSprite.x = 0;
-                if(Gdx.input.isKeyPressed(Keys.RIGHT)) playerSprite.x += 200 * Gdx.graphics.getDeltaTime();
-                if(playerSprite.x > WINDOWWIDTH - PLAYERWIDTH) playerSprite.x = WINDOWWIDTH - 64;
-                if(Gdx.input.isKeyPressed(Keys.UP)) playerSprite.y += 200 * Gdx.graphics.getDeltaTime();
-                if(playerSprite.y > WINDOWHEIGHT - PLAYERHEIGHT) playerSprite.y = WINDOWHEIGHT -64;
-                if(Gdx.input.isKeyPressed(Keys.DOWN)) playerSprite.y -= 200 * Gdx.graphics.getDeltaTime();
-                if(playerSprite.y < 20) playerSprite.y = 20;
-                if(Gdx.input.isKeyPressed(Keys.SPACE) && (TimeUtils.nanoTime() - lastPlayerBullet) > 200000000) firePlayerBullet();
-                
-                // Collision Detection
-                
-                
-                
-                // Draw
-                
-                Gdx.gl.glClearColor(0, 0, 0, 1);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-                batch.setProjectionMatrix(orthoCam.combined);
-		batch.begin();
-                batch.draw(background, 0, 0);
-		batch.draw(playerShipTexture, playerSprite.x, playerSprite.y);
-                for(Rectangle enemy: enemies){
-                    batch.draw(enemyShip1, enemy.x, enemy.y);
-                }
-                for(Rectangle bullet: friendlyBullets){
-                    batch.draw(bulletImage, bullet.x, bullet.y);
-                }
-                for(Rectangle enemyBullet: enemyBullets){
-                    batch.draw(bulletImage, enemyBullet.x, enemyBullet.y);
-                }
-		batch.end();
-                
+            }
+            
+            // Player actions
+
+            if(Gdx.input.isKeyPressed(Keys.LEFT)) playerSprite.x -= 200 * Gdx.graphics.getDeltaTime();
+            if(playerSprite.x < 0) playerSprite.x = 0;
+            if(Gdx.input.isKeyPressed(Keys.RIGHT)) playerSprite.x += 200 * Gdx.graphics.getDeltaTime();
+            if(playerSprite.x > WINDOWWIDTH - PLAYERWIDTH) playerSprite.x = WINDOWWIDTH - 64;
+            if(Gdx.input.isKeyPressed(Keys.UP)) playerSprite.y += 200 * Gdx.graphics.getDeltaTime();
+            if(playerSprite.y > WINDOWHEIGHT - PLAYERHEIGHT) playerSprite.y = WINDOWHEIGHT -64;
+            if(Gdx.input.isKeyPressed(Keys.DOWN)) playerSprite.y -= 200 * Gdx.graphics.getDeltaTime();
+            if(playerSprite.y < 20) playerSprite.y = 20;
+            if(Gdx.input.isKeyPressed(Keys.SPACE) && (TimeUtils.nanoTime() - lastPlayerBullet) > 200000000) firePlayerBullet();
+
+            // Collision Detection
+
+            
+
+            // Draw
+
+            Gdx.gl.glClearColor(0, 0, 0, 1);
+            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+            batch.setProjectionMatrix(orthoCam.combined);
+            batch.begin();
+            batch.draw(background, 0, 0);
+            batch.draw(playerShipTexture, playerSprite.x, playerSprite.y);
+            for(Rectangle enemy: enemies){
+                batch.draw(enemyShip1, enemy.x, enemy.y);
+            }
+            for(Rectangle bullet: friendlyBullets){
+                batch.draw(bulletImage, bullet.x, bullet.y);
+            }
+            for(Rectangle enemyBullet: enemyBullets){
+                batch.draw(bulletImage, enemyBullet.x, enemyBullet.y);
+            }
+            batch.end();
+
 	}
         
         @Override
@@ -199,6 +210,7 @@ public class podmGame extends ApplicationAdapter {
             maryStageTheme.dispose();
             background.dispose();
             batch.dispose();
+            
         }
         
         private void spawnEnemy(int cX, int cY) {
@@ -218,6 +230,7 @@ public class podmGame extends ApplicationAdapter {
             bullet.height=4;
             friendlyBullets.add(bullet);
             lastPlayerBullet = TimeUtils.nanoTime();
+            frBulletCount++;
         }
         
         private void fireEnemyBullet(int coordX, int coordY){
