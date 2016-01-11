@@ -48,7 +48,7 @@ public class podmGame extends ApplicationAdapter {
         private final int PLAYERWIDTH = 64;
         
         // Declare Arrays
-        private Array<Rectangle> enemies;
+        private Array<Enemy> enemies;
         private Array<Rectangle> enemyBullets;
         private Array<Rectangle> friendlyBullets;
         
@@ -58,7 +58,7 @@ public class podmGame extends ApplicationAdapter {
                 
                 bulletImage = new Texture ("bullet.png");
                 
-                enemies = new Array<Rectangle>();
+                enemies = new Array<Enemy>();
                 
                 friendlyBullets = new Array<Rectangle>();
                 enemyBullets = new Array<Rectangle>();
@@ -96,7 +96,7 @@ public class podmGame extends ApplicationAdapter {
                 
                 // Enemy movement
                 
-                Iterator<Rectangle> enemyiter = enemies.iterator();
+                Iterator<Enemy> enemyiter = enemies.iterator();
                 while(enemyiter.hasNext()) {
                     Rectangle enemy = enemyiter.next();
                     if (enemy.y >= WINDOWHEIGHT - 200){
@@ -106,14 +106,10 @@ public class podmGame extends ApplicationAdapter {
                 
                 // Enemy bullets
                 
-                for(Rectangle enemy: enemies){
-                    if(enemy.y <= WINDOWHEIGHT-200
-                            &&
-                       counter >= .5){
-                        counter =0;
+                for(Enemy enemy: enemies){
+                    if(TimeUtils.nanoTime() - enemy.getTimeSinceBullet() > 200000000){
+                        enemy.setTimeSinceBullet(TimeUtils.nanoTime());
                         fireEnemyBullet((int)enemy.x,(int)enemy.y);
-                    } else {
-                        counter = counter + Gdx.graphics.getDeltaTime();
                     }
                 }
                 
@@ -206,12 +202,11 @@ public class podmGame extends ApplicationAdapter {
         }
         
         private void spawnEnemy(int cX, int cY) {
-            Rectangle enemy = new Rectangle();
-            enemy.x = cX;
-            enemy.y = cY;
-            enemy.width = 64;
-            enemy.height = 64;
-            enemies.add(enemy);
+            Enemy en = new Enemy(cX,cY);
+            en.width = 64;
+            en.height = 64;
+            en.setTimeSinceBullet(TimeUtils.nanoTime());
+            enemies.add(en);
             enemyCounter++;
         }
         

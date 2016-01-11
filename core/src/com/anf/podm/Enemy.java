@@ -1,20 +1,24 @@
 
 package com.anf.podm;
 
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Rectangle;
 
-class Enemy extends Rectangle{
-    static int enemyCount;
-
-    int enemyX = 0;
-    int enemyY = 0;
-    Texture enemyTexture;
+public class Enemy extends Rectangle {
     
-    void Enemy(int enemyType){
-        
-        this.enemyTexture = new Texture ("enemyship1.png");
-        
+    long timeSinceBullet;
+    
+    Enemy (int cX, int cY){
+        this.timeSinceBullet = 0;
+        this.x = cX;
+        this.y = cY;
+    }
+
+    public long getTimeSinceBullet() {
+        return timeSinceBullet;
+    }
+
+    public void setTimeSinceBullet(long timeSinceBullet) {
+        this.timeSinceBullet = timeSinceBullet;
     }
     
 }
