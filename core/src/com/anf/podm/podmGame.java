@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.TimeUtils;
+import java.util.Iterator;
 
 public class podmGame extends ApplicationAdapter {
     
@@ -20,12 +22,17 @@ public class podmGame extends ApplicationAdapter {
 	private SpriteBatch batch;
         
         // Declare timers
-        private int enemyCounter;
-        private int wave;
+        private static int enemyCounter=0;
+        private int wave=0;
+        private long lastPlayerBullet;
+        private long lastEnemyBullet;
+        private double counter;
         
         // Declare Textures
         private Texture playerShipTexture;
         private Texture enemyShip1;
+        private Texture background;
+        private Texture bulletImage;
         
         // Declare Sounds
         private Music pirateSpaceTheme;
@@ -41,12 +48,21 @@ public class podmGame extends ApplicationAdapter {
         private final int PLAYERWIDTH = 64;
         
         // Declare Arrays
-        private Array<Enemy> enemies;
+        private Array<Rectangle> enemies;
         private Array<Rectangle> enemyBullets;
         private Array<Rectangle> friendlyBullets;
         
 	@Override
 	public void create () {
+                background = new Texture ("bg01.png");
+                
+                bulletImage = new Texture ("bullet.png");
+                
+                enemies = new Array<Rectangle>();
+                
+                friendlyBullets = new Array<Rectangle>();
+                enemyBullets = new Array<Rectangle>();
+                
                 playerSprite = new Rectangle();
                 playerSprite.x = WINDOWWIDTH / 2 - 64 / 2;
                 playerSprite.y = 20;
@@ -55,31 +71,95 @@ public class podmGame extends ApplicationAdapter {
                 
 		batch = new SpriteBatch();
                 enemyShip1 = new Texture ("enemyship1.png");
-                playerShipTexture = new Texture ("playership.png");
+                playerShipTexture = new Texture ("mainship01.png");
                 maryStageTheme = Gdx.audio.newMusic(Gdx.files.internal("bloodymaryfightthememaster2_16bit.wav"));
                 maryStageTheme.setLooping(true);
                 maryStageTheme.play();
-                
-                wave=0;
-                
+                                
                 orthoCam = new OrthographicCamera();
                 orthoCam.setToOrtho(false, WINDOWWIDTH, WINDOWHEIGHT);
 	}
 
 	@Override
 	public void render () {
-
+                // Bullet Spawning
+                
+                
                 
                 // Enemy spawning
                 
-                if (Enemy.enemyCount==0) {
+                if (enemyCounter==0) {
                     wave++;
-                    
-                } else {
-                    
-                };
+                    spawnEnemy(100,864);
+                    spawnEnemy(300,864);
+                }
                 
-                // Player movement
+                // Enemy movement
+                
+                Iterator<Rectangle> enemyiter = enemies.iterator();
+                while(enemyiter.hasNext()) {
+                    Rectangle enemy = enemyiter.next();
+                    if (enemy.y >= WINDOWHEIGHT - 200){
+                        enemy.y -= 200 * Gdx.graphics.getDeltaTime();
+                    }
+                }
+                
+                // Enemy bullets
+                
+                for(Rectangle enemy: enemies){
+                    if(enemy.y <= WINDOWHEIGHT-200
+                            &&
+                       counter >= .5){
+                        counter =0;
+                        fireEnemyBullet((int)enemy.x,(int)enemy.y);
+                    } else {
+                        counter = counter + Gdx.graphics.getDeltaTime();
+                    }
+                }
+                
+                // Bullet tracking
+                
+                Iterator<Rectangle> bulletiter = friendlyBullets.iterator();
+                if(bulletiter.hasNext()){
+                    while(bulletiter.hasNext()) {
+                        Rectangle curBullet = bulletiter.next();
+                        if (curBullet.y < WINDOWHEIGHT + 4){
+                            curBullet.y += 200 * Gdx.graphics.getDeltaTime();
+                        }
+                    }
+                }
+                
+                Iterator<Rectangle> enemybulletiter = enemyBullets.iterator();
+                if(enemybulletiter.hasNext()){
+                    while(enemybulletiter.hasNext()) {
+                        Rectangle curBullet = enemybulletiter.next();
+                        if (curBullet.y < WINDOWHEIGHT){
+                            curBullet.y -= 200 * Gdx.graphics.getDeltaTime();
+                        }
+                    }
+                }
+                
+                // Bullet cleanup
+                
+                if(bulletiter.hasNext()){
+                    while(bulletiter.hasNext()) {
+                        Rectangle curBullet = bulletiter.next();
+                        if (curBullet.y > WINDOWHEIGHT + 4){
+                            bulletiter.remove();
+                        }
+                    }
+                }
+                
+                if(enemybulletiter.hasNext()){
+                    while(enemybulletiter.hasNext()) {
+                        Rectangle curBullet = enemybulletiter.next();
+                        if (curBullet.y < -4){
+                            enemybulletiter.remove();
+                        }
+                    }
+                }
+                                
+                // Player actions
                 
                 if(Gdx.input.isKeyPressed(Keys.LEFT)) playerSprite.x -= 200 * Gdx.graphics.getDeltaTime();
                 if(playerSprite.x < 0) playerSprite.x = 0;
@@ -89,6 +169,11 @@ public class podmGame extends ApplicationAdapter {
                 if(playerSprite.y > WINDOWHEIGHT - PLAYERHEIGHT) playerSprite.y = WINDOWHEIGHT -64;
                 if(Gdx.input.isKeyPressed(Keys.DOWN)) playerSprite.y -= 200 * Gdx.graphics.getDeltaTime();
                 if(playerSprite.y < 20) playerSprite.y = 20;
+                if(Gdx.input.isKeyPressed(Keys.SPACE) && (TimeUtils.nanoTime() - lastPlayerBullet) > 200000000) firePlayerBullet();
+                
+                // Collision Detection
+                
+                
                 
                 // Draw
                 
@@ -96,21 +181,69 @@ public class podmGame extends ApplicationAdapter {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
                 batch.setProjectionMatrix(orthoCam.combined);
 		batch.begin();
+                batch.draw(background, 0, 0);
 		batch.draw(playerShipTexture, playerSprite.x, playerSprite.y);
+                for(Rectangle enemy: enemies){
+                    batch.draw(enemyShip1, enemy.x, enemy.y);
+                }
+                for(Rectangle bullet: friendlyBullets){
+                    batch.draw(bulletImage, bullet.x, bullet.y);
+                }
+                for(Rectangle enemyBullet: enemyBullets){
+                    batch.draw(bulletImage, enemyBullet.x, enemyBullet.y);
+                }
 		batch.end();
                 
 	}
         
-        private void waveLoader(){
-            enemies.clear();
-            switch (wave){
-                case 0:
-                    Enemy enemy1 = new Enemy();
-                    enemies.add(enemy1);
-                    Enemy enemy2 = new Enemy();
-                    enemies.add(enemy2);
-
-            }
+        @Override
+        public void dispose() {
+            playerShipTexture.dispose();
+            enemyShip1.dispose();
+            maryStageTheme.dispose();
+            background.dispose();
+            batch.dispose();
         }
+        
+        private void spawnEnemy(int cX, int cY) {
+            Rectangle enemy = new Rectangle();
+            enemy.x = cX;
+            enemy.y = cY;
+            enemy.width = 64;
+            enemy.height = 64;
+            enemies.add(enemy);
+            enemyCounter++;
+        }
+        
+        private void firePlayerBullet(){
+            Rectangle bullet = new Rectangle();
+            bullet.x = playerSprite.x + (PLAYERWIDTH / 2);
+            bullet.y = playerSprite.y + 40;
+            bullet.width=4;
+            bullet.height=4;
+            friendlyBullets.add(bullet);
+            lastPlayerBullet = TimeUtils.nanoTime();
+        }
+        
+        private void fireEnemyBullet(int coordX, int coordY){
+            Rectangle bullet = new Rectangle();
+            bullet.x = coordX + (PLAYERWIDTH / 2);
+            bullet.y = coordY + 40;
+            bullet.width=4;
+            bullet.height=4;
+            enemyBullets.add(bullet);
+        }
+        
+//        private void waveLoader(){
+//            enemies.clear();
+//            switch (wave){
+//                case 0:
+//                    Enemy enemy1 = new Enemy();
+//                    enemies.add(enemy1);
+//                    Enemy enemy2 = new Enemy();
+//                    enemies.add(enemy2);
+//
+//            }
+//        }
         
 }
