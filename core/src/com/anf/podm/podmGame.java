@@ -76,9 +76,10 @@ public class podmGame extends ApplicationAdapter {
                 playerSprite.width = 64;
                 playerSprite.height = 64;
                 
-		batch = new SpriteBatch();
+                batch = new SpriteBatch();
                 enemyShip1 = new Texture ("enemyship1.png");
                 playerShipTexture = new Texture ("mainship01.png");
+                
                 maryStageTheme = Gdx.audio.newMusic(Gdx.files.internal("bloodymaryfightthememaster2_16bit.wav"));
                 maryStageTheme.setLooping(true);
                 maryStageTheme.play();
