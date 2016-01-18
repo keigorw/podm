@@ -3,6 +3,7 @@ package com.anf.podm;
 
 import com.badlogic.gdx.math.Rectangle;
 
+@SuppressWarnings("serial")
 public class Enemy extends Rectangle {
     
     long timeSinceBullet;
